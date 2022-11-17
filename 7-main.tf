@@ -23,38 +23,6 @@ resource "random_pet" "pet" {
 resource "aws_security_group" "instances_sg" {
   name   = "${var.security_group_name}-instances-${random_pet.pet.id}_${terraform.workspace}"
   vpc_id = aws_vpc.my_vpc.id
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  ingress {
-    from_port   = -1
-    to_port     = -1
-    protocol    = "icmp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-  # opening port 22 to be able to ssh to the instances
-  ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = [data.aws_vpc.default.cidr_block, local.myip]
-  }
-  # provide internet access to the instance (install packages, etc)
-  egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
 }
 
 resource "aws_security_group" "alb_sg" {
@@ -98,30 +66,69 @@ resource "aws_security_group_rule" "egress_alb" {
 }
 
 resource "aws_instance" "server" {
+  count                  = var.server_count
   ami                    = var.ami
   instance_type          = var.server_instance_type
-  vpc_security_group_ids = [aws_security_group.instances.id]
+  vpc_security_group_ids = [aws_security_group.instances_sg.id]
   key_name               = aws_key_pair.generated_key.key_name
   root_block_device {
     volume_size = 100
     volume_type = "io1"
     iops        = 1000
   }
-  user_data = templatefile("cloudinit_server.yaml", {
-    record-fqdn = var.record_name,
-    email       = var.email
-  })
+  user_data = templatefile("cloudinit_server.yaml",{})
   tags = {
     Name = "server_${random_pet.pet.id}_${terraform.workspace}"
   }
 }
-data "aws_route53_zone" "base_domain" {
-  name = var.hosted_zone_name
+
+resource "aws_lb_target_group" "webserver_tg" {
+  name= "webserver-target-group"
+  port = 80
+  protocol = "HTTP"
+  vpc_id = aws_vpc.my_vpc.id
+
+  stickiness {
+    enabled = false
+    type    = "lb_cookie"
+  }
+  health_check {
+    enabled     = true
+    port        = 80
+    interval    = 30
+    protocol = "HTTP"
+    path        = "/"
+    matcher = "200"
+    healthy_threshold = 4
+    unhealthy_threshold = 4
+  }
 }
-resource "aws_route53_record" "www" {
-  zone_id = data.aws_route53_zone.base_domain.zone_id
-  name    = var.record_name
-  type    = "A"
-  ttl     = 300
-  records = [aws_instance.server.public_ip]
+
+resource "aws_lb_target_group_attachment" "webserver_tg_attach" {
+  # for_each =toset(aws_instance.server)
+  count = var.server_count
+
+  target_group_arn = aws_lb_target_group.webserver_tg.arn
+  target_id = aws_instance.server[count.index].id
+  port = 80
+}
+resource "aws_lb" "main_lb" {
+  name = "main-lb"
+  internal = false
+  load_balancer_type = "application"
+  security_groups = [aws_security_group.alb_sg.id] 
+
+  subnets = [aws_subnet.public.id] 
+
+}
+
+resource "aws_lb_listener" "http" {
+  load_balancer_arn = aws_lb.main_lb.arn
+  port = "80"
+  protocol = "HTTP"
+
+  default_action {
+    type= "forward"
+    target_group_arn = aws_lb_target_group.webserver_tg.arn
+  }
 }

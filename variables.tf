@@ -1,7 +1,7 @@
 variable "security_group_name" {
   description = "The name of the security group"
   type        = string
-  default     = "nomad-1server-1client-sg-row8"
+  default     = "load-balancer-row9"
 }
 
 variable "ami" {
@@ -20,17 +20,8 @@ variable "server_instance_type" {
   default     = "t2.micro"
 }
 
-variable "record_name" {
-  description = "dns recored will be add to route53"
-  type        = string
-}
-
-variable "hosted_zone_name" {
-  description = "hosted zone name "
-  type        = string
-}
-
-variable "email" {
-  description = "an email use for lets encrypt "
-  type        = string
+variable "server_count" {
+  description = "The number of servers"
+  type        = number
+  default     = 1
 }
