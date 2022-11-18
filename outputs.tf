@@ -3,7 +3,7 @@ output "server_private_ip" {
   value       = aws_instance.server[*].private_ip
 }
 
-output "lb_dns_name" {
-  description = "access to the server by domain"
+output "link_http" {
+  description = "access to the web page"
   value       = "http://${aws_lb.main_lb.dns_name}"
 }
