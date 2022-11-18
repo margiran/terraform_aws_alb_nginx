@@ -2,7 +2,7 @@
 
 ### using Terraform, AWS 
 
-![datacenter image](https://github.com/margiran/nginx_valid_certificate/blob/master/diagram/load_balancing_in_the_cloud_aws_nginx_plus.png?raw=true)
+![datacenter image](https://github.com/margiran/nginx_valid_certificate/blob/master/diagram/load_balancing_in_aws_cloud.png?raw=true)
 
 ## Pre-requisites
 

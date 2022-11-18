@@ -3,24 +3,27 @@
 from mmap import PROT_READ
 from diagrams import Diagram
 from diagrams import Cluster, Diagram, Edge
-from diagrams.custom import Custom
 from diagrams.aws.compute import EC2 
 from diagrams.onprem.network import Nginx
 from diagrams.aws.network    import Route53,InternetGateway,NATGateway,ElbApplicationLoadBalancer
 from diagrams.onprem.compute import Server
 
-with Diagram("Load Balancing in the Cloud AWS NGINX Plus", show=False):
+with Diagram("Load Balancing in AWS Cloud", show=False):
     client = Server("Client")
     with Cluster("VPC"):
         igw = InternetGateway("IGW")
-        with Cluster("Public-SubNet"):
+        with Cluster("Public-Subnet-a"):
             nat_gw = NATGateway("Nat_gateWay")
-            lb=ElbApplicationLoadBalancer("ALB")
-        with Cluster("Private-SubNet"):
+            lba=ElbApplicationLoadBalancer("ALB")
+        with Cluster("Public-Subnet-b"):
+            lbb=ElbApplicationLoadBalancer("ALB")
+        with Cluster("Private-Subnet"):
             ec2= EC2("Server")
 
-        client >> lb
-        lb >> ec2
+        client >> lba
+        client >> lbb
+        lba >> ec2
+        lbb >> ec2
         ec2 >> nat_gw
         nat_gw >> igw
         # lb >> igw

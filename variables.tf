@@ -11,8 +11,8 @@ variable "ami" {
 }
 
 variable "cidrblock" {
-    default = "10.0.0.0/20"
-    type = string
+  default = "10.0.0.0/20"
+  type    = string
 }
 variable "server_instance_type" {
   description = "The type of EC2 Instances to run (e.g. t2.micro)"
